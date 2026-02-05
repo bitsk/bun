@@ -813,6 +813,8 @@ pub fn reportBaseUrl() []const u8 {
 
 const arch_display_string = if (bun.Environment.isAarch64)
     if (bun.Environment.isMac) "Silicon" else "arm64"
+else if (bun.Environment.isRiscv64)
+    "riscv64"
 else
     "x64";
 

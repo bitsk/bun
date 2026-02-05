@@ -1,0 +1,61 @@
+name: RISC-V Build
+
+on:
+  push:
+    branches: [main, feature/riscv64]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-riscv64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y \
+            cmake ninja-build ruby python3 \
+            libicu-dev libxml2-dev libxslt1-dev \
+            libsqlite3-dev libssl-dev
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Configure for RISC-V
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DZIG_TARGET=riscv64-linux-gnu \
+            -DCMAKE_SYSTEM_PROCESSOR=riscv64 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Bun for RISC-V
+        run: |
+          cd build
+          cmake --build . --target bun -j$(nproc)
+        timeout-minutes: 120
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bun-riscv64
+          path: build/bun
+          retention-days: 7
+
+      - name: Test basic functionality
+        run: |
+          # Note: Tests require JSC which is not yet working on RISC-V
+          echo "Basic build test - JSC integration pending"
+          file build/bun || true
